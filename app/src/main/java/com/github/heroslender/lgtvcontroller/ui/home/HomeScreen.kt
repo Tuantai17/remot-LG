@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.filled.ElectricalServices
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
@@ -37,12 +38,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -152,6 +157,37 @@ fun HomeScreen(
     navigateToController: () -> Unit,
     navigateToEditDevice: (String) -> Unit,
 ) {
+    if (uiState.deviceStatus == DeviceStatus.PIN_REQUIRED) {
+        var pinCode by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Nhập mã PIN") },
+            text = {
+                OutlinedTextField(
+                    value = pinCode,
+                    onValueChange = { value ->
+                        pinCode = value.filter(Char::isDigit).take(8)
+                    },
+                    label = { Text("Mã PIN hiển thị trên TV") },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = pinCode.isNotBlank(),
+                    onClick = { uiState.sendPin(pinCode) },
+                ) {
+                    Text("Kết nối")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = navigateToDeviceList) {
+                    Text("Hủy")
+                }
+            },
+        )
+    }
+
     ConnectedDeviceScaffold(
         errorFlow = errorFlow,
         textInputState = textInputState,

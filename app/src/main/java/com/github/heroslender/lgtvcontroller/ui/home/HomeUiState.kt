@@ -15,4 +15,5 @@ data class HomeUiState(
     val hasCapability: (DeviceControllerButton) -> Boolean = { false },
     val executeButton: (DeviceControllerButton) -> Unit = {},
     val launchApp: (String) -> Unit = {},
+    val sendPin: (String) -> Unit = {},
 )

@@ -33,6 +33,7 @@ class HomeViewModel @Inject constructor(
                     hasCapability = device::hasCapability,
                     executeButton = device::executeControllerButton,
                     launchApp = device::launchApp,
+                    sendPin = deviceManager::sendPin,
                 )
             }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, HomeUiState())
