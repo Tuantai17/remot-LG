@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons.Filled
 import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
@@ -33,6 +34,7 @@ import com.github.heroslender.lgtvcontroller.R.string
 import com.github.heroslender.lgtvcontroller.ui.snackbar.Snackbar
 import com.github.heroslender.lgtvcontroller.ui.snackbar.StackedSnackbarHost
 import com.github.heroslender.lgtvcontroller.ui.snackbar.rememberStackedSnackbarHostState
+import com.github.heroslender.lgtvcontroller.ui.voice.VoiceSearchDialog
 import kotlinx.coroutines.flow.Flow
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,15 +84,28 @@ fun ConnectedDeviceScaffold(
         )
     }
 
+    var showVoiceSearchDialog by remember { mutableStateOf(false) }
+    if (showVoiceSearchDialog) {
+        VoiceSearchDialog(
+            onSendToTv = {
+                textInputState.sendText(it)
+                isTextSet = it
+                showVoiceSearchDialog = false
+            },
+            onDismissRequest = { showVoiceSearchDialog = false },
+        )
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = topBar,
         floatingActionButtonPosition = FabPosition.Center,
         floatingActionButton = {
             AnimatedVisibility(textInputState.isKeyboardOpen) {
-                TextInputBottomBar(onClick = {
-                    showKeyboardTextInputDialog = true
-                })
+                TextInputBottomBar(
+                    onKeyboardClick = { showKeyboardTextInputDialog = true },
+                    onVoiceClick = { showVoiceSearchDialog = true },
+                )
             }
         },
         snackbarHost = { StackedSnackbarHost(hostState = stackedSnackbarHostState) },
@@ -107,23 +122,43 @@ fun ConnectedDeviceScaffold(
 
 @Composable
 fun TextInputBottomBar(
-    onClick: () -> Unit,
+    onKeyboardClick: () -> Unit,
+    onVoiceClick: () -> Unit,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
-            .clickable(
-                interactionSource = interactionSource,
-                indication = ripple(),
-                onClick = onClick,
-            )
             .background(MaterialTheme.colorScheme.primaryContainer)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Filled.Keyboard, null)
-        Text("Text Input", modifier = Modifier.padding(start = 8.dp))
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = ripple(),
+                    onClick = onKeyboardClick,
+                )
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Filled.Keyboard, contentDescription = "Nhập văn bản")
+            Text("Nhập chữ", modifier = Modifier.padding(start = 8.dp))
+        }
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = ripple(),
+                    onClick = onVoiceClick,
+                )
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Filled.Mic, contentDescription = "Tìm kiếm bằng giọng nói")
+            Text("Giọng nói", modifier = Modifier.padding(start = 8.dp))
+        }
     }
 }
