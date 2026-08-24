@@ -57,4 +57,6 @@ object PreviewDevice : Device {
     override fun sendDelete() {}
     override fun disconnect() {}
     override fun updateStatus(status: DeviceStatus) {}
+
+    override fun sendPin(pin: String) {}
 }
