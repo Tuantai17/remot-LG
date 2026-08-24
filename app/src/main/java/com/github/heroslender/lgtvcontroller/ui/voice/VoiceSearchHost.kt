@@ -110,15 +110,53 @@ fun VoiceSearchHost(
                     data = Uri.fromParts("package", context.packageName, null)
                 })
             },
+            onCompleteListening = {
+                val transcript = manager.completeNow()
+                if (transcript != null) {
+                    val action = VoiceCommandParser.parse(transcript)
+                    when (action) {
+                        is VoiceAction.SearchText -> {
+                            if (isTextInputAvailable) {
+                                manager.markSearching(action.text)
+                                sendText(action.text)
+                                sendEnter()
+                                manager.markSuccess(action.text)
+                            } else {
+                                manager.updateResult(action.text)
+                            }
+                        }
+                        VoiceAction.VolumeUp -> {
+                            manager.markSearching(transcript)
+                            executeButton(DeviceControllerButton.VOLUME_UP)
+                            manager.markSuccess(transcript)
+                        }
+                        VoiceAction.VolumeDown -> {
+                            manager.markSearching(transcript)
+                            executeButton(DeviceControllerButton.VOLUME_DOWN)
+                            manager.markSuccess(transcript)
+                        }
+                        VoiceAction.Mute -> {
+                            manager.markSearching(transcript)
+                            executeButton(DeviceControllerButton.MUTE)
+                            manager.markSuccess(transcript)
+                        }
+                        is VoiceAction.LaunchApp -> {
+                            manager.markSearching(transcript)
+                            launchApp(action.appId)
+                            manager.markSuccess(transcript)
+                        }
+                    }
+                }
+            },
             onConfirm = { rawText ->
                 val action = VoiceCommandParser.parse(rawText)
                 when (action) {
                     is VoiceAction.SearchText -> {
                         if (isTextInputAvailable) {
+                            manager.markSearching(action.text)
                             sendText(action.text)
                             sendEnter()
-                            manager.reset()
-                            showDialog = false
+                            manager.markSuccess(action.text)
                         } else {
                             manager.updateResult(action.text)
                         }
@@ -129,8 +167,7 @@ fun VoiceSearchHost(
                     is VoiceAction.LaunchApp -> launchApp(action.appId)
                 }
                 if (action !is VoiceAction.SearchText) {
-                    manager.reset()
-                    showDialog = false
+                    manager.markSuccess(rawText)
                 }
             },
             textInputUnavailable = state.phase == VoiceSearchPhase.RESULT && !isTextInputAvailable,
@@ -145,6 +182,7 @@ fun VoiceSearchDialog(
     onRetry: () -> Unit,
     onCancel: () -> Unit,
     onOpenSettings: () -> Unit,
+    onCompleteListening: () -> Unit,
     onConfirm: (String) -> Unit,
     textInputUnavailable: Boolean,
 ) {
@@ -184,7 +222,19 @@ fun VoiceSearchDialog(
                         Text("Đang lắng nghe…")
                         if (state.partialText.isNotBlank()) Text(state.partialText)
                     }
-                    VoiceSearchPhase.PROCESSING -> Text("Đang xử lý…")
+                    VoiceSearchPhase.PROCESSING -> {
+                        Text("Đang xử lý…")
+                        Text(state.displayText)
+                    }
+                    VoiceSearchPhase.SEARCHING -> {
+                        Text("Đang gửi tới TV…")
+                        Text(state.displayText)
+                    }
+                    VoiceSearchPhase.SUCCESS -> {
+                        Text("Đã gửi tới TV")
+                        Text("Chế độ Voice → Text → TV")
+                        Text(state.displayText)
+                    }
                     VoiceSearchPhase.RESULT -> OutlinedTextField(
                         value = state.finalText,
                         onValueChange = onTextChanged,
@@ -196,7 +246,8 @@ fun VoiceSearchDialog(
                 }
                 if (textInputUnavailable) {
                     Text(
-                        "Hãy mở ô tìm kiếm trên TV, sau đó gửi lại.",
+                        "LG webOS không hỗ trợ trực tiếp nút Voice Assistant qua API remote công khai. " +
+                            "Hãy mở ô tìm kiếm trên TV để dùng chế độ Voice → Text → TV.",
                         modifier = Modifier.padding(top = 8.dp),
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -204,12 +255,20 @@ fun VoiceSearchDialog(
             }
         },
         confirmButton = {
-            if (state.phase == VoiceSearchPhase.RESULT) {
-                TextButton(onClick = { onConfirm(state.finalText) }, enabled = state.finalText.isNotBlank()) {
-                    Text("Gửi tới TV")
+            when (state.phase) {
+                VoiceSearchPhase.LISTENING -> {
+                    TextButton(
+                        onClick = onCompleteListening,
+                        enabled = state.displayText.isNotBlank(),
+                    ) { Text("Hoàn thành") }
                 }
-            } else if (state.phase == VoiceSearchPhase.ERROR) {
-                TextButton(onClick = onRetry) { Text("Thử lại") }
+                VoiceSearchPhase.RESULT -> {
+                    TextButton(onClick = { onConfirm(state.finalText) }, enabled = state.finalText.isNotBlank()) {
+                        Text("Gửi tới TV")
+                    }
+                }
+                VoiceSearchPhase.ERROR -> TextButton(onClick = onRetry) { Text("Thử lại") }
+                else -> Unit
             }
         },
         dismissButton = {

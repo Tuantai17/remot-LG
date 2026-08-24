@@ -6,6 +6,8 @@ enum class VoiceSearchPhase {
     LISTENING,
     PROCESSING,
     RESULT,
+    SEARCHING,
+    SUCCESS,
     ERROR,
     CANCELLED,
 }
@@ -30,12 +32,17 @@ sealed interface VoiceAction {
     data class LaunchApp(val appId: String) : VoiceAction
 }
 
+enum class VoiceDeliveryMode {
+    TEXT_INPUT_FALLBACK,
+}
+
 data class VoiceSearchState(
     val phase: VoiceSearchPhase = VoiceSearchPhase.IDLE,
     val partialText: String = "",
     val finalText: String = "",
     val error: VoiceSearchError? = null,
     val localeTag: String = DEFAULT_VOICE_LOCALE,
+    val deliveryMode: VoiceDeliveryMode? = null,
 ) {
     val displayText: String
         get() = finalText.ifBlank { partialText }

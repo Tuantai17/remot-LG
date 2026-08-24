@@ -9,14 +9,17 @@ import android.speech.SpeechRecognizer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.atomic.AtomicBoolean
 
 class VoiceSearchManager(context: Context) : RecognitionListener {
     private val appContext = context.applicationContext
     private var recognizer: SpeechRecognizer? = null
+    private val isCompleting = AtomicBoolean(false)
     private val _state = MutableStateFlow(VoiceSearchState())
     val state: StateFlow<VoiceSearchState> = _state.asStateFlow()
 
     fun start(localeTag: String = DEFAULT_VOICE_LOCALE) {
+        isCompleting.set(false)
         if (!SpeechRecognizer.isRecognitionAvailable(appContext)) {
             fail(VoiceSearchError.RECOGNIZER_UNAVAILABLE)
             return
@@ -50,7 +53,37 @@ class VoiceSearchManager(context: Context) : RecognitionListener {
         )
     }
 
+    fun completeNow(): String? {
+        if (!isCompleting.compareAndSet(false, true)) return null
+        val transcript = _state.value.displayText.trim()
+        recognizer?.stopListening()
+        if (transcript.isBlank()) {
+            fail(VoiceSearchError.NO_SPEECH)
+            return null
+        }
+        _state.value = _state.value.copy(
+            phase = VoiceSearchPhase.PROCESSING,
+            finalText = transcript,
+            partialText = "",
+            error = null,
+        )
+        return transcript
+    }
+
+    fun markSearching(text: String) {
+        _state.value = _state.value.copy(phase = VoiceSearchPhase.SEARCHING, finalText = text)
+    }
+
+    fun markSuccess(text: String) {
+        _state.value = _state.value.copy(
+            phase = VoiceSearchPhase.SUCCESS,
+            finalText = text,
+            deliveryMode = VoiceDeliveryMode.TEXT_INPUT_FALLBACK,
+        )
+    }
+
     fun cancel() {
+        isCompleting.set(true)
         recognizer?.cancel()
         _state.value = _state.value.copy(phase = VoiceSearchPhase.CANCELLED)
     }
@@ -87,6 +120,7 @@ class VoiceSearchManager(context: Context) : RecognitionListener {
     }
 
     override fun onError(error: Int) {
+        if (isCompleting.get()) return
         fail(
             when (error) {
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> VoiceSearchError.PERMISSION_DENIED
@@ -105,6 +139,7 @@ class VoiceSearchManager(context: Context) : RecognitionListener {
     }
 
     override fun onResults(results: Bundle?) {
+        if (isCompleting.get()) return
         val text = results
             ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
             ?.firstOrNull()
@@ -113,6 +148,7 @@ class VoiceSearchManager(context: Context) : RecognitionListener {
     }
 
     override fun onPartialResults(partialResults: Bundle?) {
+        if (isCompleting.get()) return
         val text = partialResults
             ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
             ?.firstOrNull()
