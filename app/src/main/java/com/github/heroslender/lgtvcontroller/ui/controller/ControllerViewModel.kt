@@ -32,6 +32,7 @@ class ControllerViewModel @Inject constructor(
                     sendPin = { pin -> deviceManager.sendPin(pin) },
                     hasCapability = { device.hasCapability(it) },
                     executeButton = { device.executeControllerButton(it) },
+                    launchApp = device::launchApp,
                 )
             }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, ControllerUiState())

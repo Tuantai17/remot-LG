@@ -89,6 +89,7 @@ import com.github.heroslender.lgtvcontroller.ui.controller.CTextButton
 import com.github.heroslender.lgtvcontroller.ui.icons.MyIconPack
 import com.github.heroslender.lgtvcontroller.ui.icons.myiconpack.TvRemote
 import com.github.heroslender.lgtvcontroller.ui.snackbar.Snackbar
+import com.github.heroslender.lgtvcontroller.ui.voice.VoiceSearchHost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -232,6 +233,8 @@ fun HomeScreen(
                 isConnected = uiState.deviceID != null,
                 hasCapability = uiState.hasCapability,
                 executeButton = uiState.executeButton,
+                launchApp = uiState.launchApp,
+                textInputState = textInputState,
                 navigateToController = navigateToController,
             )
 
@@ -259,6 +262,8 @@ fun ControllerShortcutsCard(
     isConnected: Boolean,
     hasCapability: (DeviceControllerButton) -> Boolean,
     executeButton: (DeviceControllerButton) -> Unit,
+    launchApp: (String) -> Unit,
+    textInputState: TvTextInputState,
     navigateToController: () -> Unit,
 ) {
     ContentCard(
@@ -298,6 +303,17 @@ fun ControllerShortcutsCard(
                 ) {
                     executeButton(DeviceControllerButton.HOME)
                 }
+                VoiceSearchHost(
+                    isConnected = isConnected,
+                    isTextInputAvailable = textInputState.isKeyboardOpen,
+                    sendText = textInputState.sendText,
+                    sendEnter = textInputState.sendEnter,
+                    executeButton = executeButton,
+                    launchApp = launchApp,
+                    modifier = Modifier
+                        .weight(1F)
+                        .aspectRatio(1F, true),
+                )
             }
 
             VolumeControls(

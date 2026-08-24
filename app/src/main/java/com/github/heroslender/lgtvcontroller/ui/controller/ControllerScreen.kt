@@ -61,6 +61,7 @@ import com.github.heroslender.lgtvcontroller.ui.TvTextInputState
 import com.github.heroslender.lgtvcontroller.ui.icons.MyIconPack
 import com.github.heroslender.lgtvcontroller.ui.icons.myiconpack.TrackpadInput
 import com.github.heroslender.lgtvcontroller.ui.snackbar.Snackbar
+import com.github.heroslender.lgtvcontroller.ui.voice.VoiceSearchHost
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
@@ -191,6 +192,18 @@ fun ControllerScreen(
                 scroll = controllerUiState.scroll,
                 hasCapability = controllerUiState.hasCapability,
                 executeButton = controllerUiState.executeButton,
+            )
+
+            VoiceSearchHost(
+                isConnected = controllerUiState.deviceStatus == DeviceStatus.CONNECTED,
+                isTextInputAvailable = tvTextInputState.isKeyboardOpen,
+                sendText = tvTextInputState.sendText,
+                sendEnter = tvTextInputState.sendEnter,
+                executeButton = controllerUiState.executeButton,
+                launchApp = controllerUiState.launchApp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(4F, false),
             )
         }
     }
