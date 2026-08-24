@@ -52,8 +52,8 @@ object PreviewDevice : Device {
     override fun scroll(x: Double, y: Double) {}
     override fun launchNetflix() {}
     override fun launchApp(appId: String) {}
-    override fun sendText(text: String) {}
-    override fun sendEnter() {}
+    override fun sendText(text: String, onSuccess: (() -> Unit)?, onError: ((Exception) -> Unit)?) {}
+    override fun sendEnter(onSuccess: (() -> Unit)?, onError: ((Exception) -> Unit)?) {}
     override fun sendDelete() {}
     override fun disconnect() {}
     override fun updateStatus(status: DeviceStatus) {}

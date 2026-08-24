@@ -285,19 +285,21 @@ class LgDevice(
     }
 
     override fun sendText(text: String, onSuccess: (() -> Unit)?, onError: ((Exception) -> Unit)?) {
-        val listener = object : com.connectsdk.service.capability.listeners.ResponseListener<Any> {
-            override fun onSuccess(response: Any?) { onSuccess?.invoke() }
-            override fun onError(error: ServiceCommandError) { onError?.invoke(Exception(error.message)) }
+        try {
+            device.device.textInputControl?.sendText(text)
+            onSuccess?.invoke()
+        } catch (e: Exception) {
+            onError?.invoke(e)
         }
-        device.device.textInputControl?.sendText(text, listener) ?: onError?.invoke(Exception("TextInputControl not available"))
     }
 
     override fun sendEnter(onSuccess: (() -> Unit)?, onError: ((Exception) -> Unit)?) {
-        val listener = object : com.connectsdk.service.capability.listeners.ResponseListener<Any> {
-            override fun onSuccess(response: Any?) { onSuccess?.invoke() }
-            override fun onError(error: ServiceCommandError) { onError?.invoke(Exception(error.message)) }
+        try {
+            device.device.textInputControl?.sendEnter()
+            onSuccess?.invoke()
+        } catch (e: Exception) {
+            onError?.invoke(e)
         }
-        device.device.textInputControl?.sendEnter(listener) ?: onError?.invoke(Exception("TextInputControl not available"))
     }
 
     override fun sendDelete() {

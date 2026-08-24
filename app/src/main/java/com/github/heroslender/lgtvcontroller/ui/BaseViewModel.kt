@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.stateIn
 
 open class BaseViewModel(
-    private val deviceManager: DeviceManager,
+    protected val deviceManager: DeviceManager,
 ) : ViewModel() {
     val tvTextInputState: StateFlow<TvTextInputState> =
         deviceManager.connectedDevice.flatMapLatest { device ->

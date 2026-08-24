@@ -14,6 +14,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -283,6 +284,7 @@ fun VoiceSearchDialog(
                         modifier = Modifier.fillMaxWidth(),
                     )
                     VoiceSearchPhase.ERROR -> Text(message, color = MaterialTheme.colorScheme.error)
+                    else -> {}
                 }
             }
         },
