@@ -13,7 +13,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class DeviceListViewModel @Inject constructor(
-    private val deviceManager: DeviceManager,
+    deviceManager: DeviceManager,
 ) : BaseViewModel(deviceManager) {
     val uiState: StateFlow<DeviceListUiState> = deviceManager.devices.map { devices ->
         DeviceListUiState(

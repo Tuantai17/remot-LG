@@ -19,7 +19,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TvEditViewModel @Inject constructor(
-    private val deviceManager: DeviceManager,
+    deviceManager: DeviceManager,
     private val tvRepository: TvRepository,
     savedStateHandle: SavedStateHandle,
 ) : BaseViewModel(deviceManager) {

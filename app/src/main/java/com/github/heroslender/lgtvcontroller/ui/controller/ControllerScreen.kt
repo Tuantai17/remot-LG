@@ -91,8 +91,6 @@ fun ControllerScreenPreview(
         deviceName = device?.friendlyName,
         deviceStatus = device?.let { runBlocking { it.state.first().status } }
             ?: DeviceStatus.DISCONNECTED,
-        hasCapability = { true },
-        executeButton = {},
     )
 
     ControllerScreen(

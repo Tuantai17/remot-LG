@@ -27,8 +27,8 @@ open class BaseViewModel(
                 TvTextInputState(
                     isKeyboardOpen = deviceState.isKeyboardOpen,
                     sendBackspace = device::sendDelete,
-                    sendEnter = device::sendEnter,
-                    sendText = device::sendText,
+                    sendEnter = { device.sendEnter(null, null) },
+                    sendText = { text -> device.sendText(text, null, null) },
                 )
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TvTextInputState())

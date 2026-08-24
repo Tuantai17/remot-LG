@@ -117,7 +117,6 @@ fun HomePreview(
             Input(id = "hdmi2", name = "HDMI2", icon = "a", connected = true),
             Input(id = "scart", name = "SCART", icon = "a"),
         ),
-        hasCapability = { true },
     )
 
     HomeScreen(
