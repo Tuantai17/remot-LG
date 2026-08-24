@@ -12,15 +12,19 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,13 +37,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.heroslender.lgtvcontroller.device.DeviceControllerButton
-import com.github.heroslender.lgtvcontroller.ui.controller.CIconButton
 
 @Composable
 fun VoiceSearchHost(
@@ -85,13 +89,62 @@ fun VoiceSearchHost(
         }
     }
 
-    CIconButton(
-        imageVector = Icons.Filled.Mic,
-        contentDescription = "Voice Search",
+    fun completeAndDispatch() {
+        val transcript = manager.completeNow() ?: return
+        when (val action = VoiceCommandParser.parse(transcript)) {
+            is VoiceAction.SearchText -> {
+                if (isTextInputAvailable) {
+                    manager.markSearching(action.text)
+                    sendText(action.text)
+                    sendEnter()
+                    manager.markSuccess(action.text)
+                } else manager.updateResult(action.text)
+            }
+            VoiceAction.VolumeUp -> {
+                manager.markSearching(transcript)
+                executeButton(DeviceControllerButton.VOLUME_UP)
+                manager.markSuccess(transcript)
+            }
+            VoiceAction.VolumeDown -> {
+                manager.markSearching(transcript)
+                executeButton(DeviceControllerButton.VOLUME_DOWN)
+                manager.markSuccess(transcript)
+            }
+            VoiceAction.Mute -> {
+                manager.markSearching(transcript)
+                executeButton(DeviceControllerButton.MUTE)
+                manager.markSuccess(transcript)
+            }
+            is VoiceAction.LaunchApp -> {
+                manager.markSearching(transcript)
+                launchApp(action.appId)
+                manager.markSuccess(transcript)
+            }
+        }
+    }
+
+    Button(
+        onClick = {},
         enabled = isConnected,
-        modifier = modifier,
-        onClick = ::begin,
-    )
+        shape = ShapeDefaults.Large,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+        modifier = modifier.pointerInput(isConnected) {
+            detectTapGestures(
+                onPress = {
+                    if (!isConnected) return@detectTapGestures
+                    begin()
+                    if (tryAwaitRelease()) completeAndDispatch()
+                }
+            )
+        },
+    ) {
+        Icon(Icons.Filled.Mic, contentDescription = "Voice Search")
+    }
 
     if (showDialog) {
         VoiceSearchDialog(
@@ -110,44 +163,7 @@ fun VoiceSearchHost(
                     data = Uri.fromParts("package", context.packageName, null)
                 })
             },
-            onCompleteListening = {
-                val transcript = manager.completeNow()
-                if (transcript != null) {
-                    val action = VoiceCommandParser.parse(transcript)
-                    when (action) {
-                        is VoiceAction.SearchText -> {
-                            if (isTextInputAvailable) {
-                                manager.markSearching(action.text)
-                                sendText(action.text)
-                                sendEnter()
-                                manager.markSuccess(action.text)
-                            } else {
-                                manager.updateResult(action.text)
-                            }
-                        }
-                        VoiceAction.VolumeUp -> {
-                            manager.markSearching(transcript)
-                            executeButton(DeviceControllerButton.VOLUME_UP)
-                            manager.markSuccess(transcript)
-                        }
-                        VoiceAction.VolumeDown -> {
-                            manager.markSearching(transcript)
-                            executeButton(DeviceControllerButton.VOLUME_DOWN)
-                            manager.markSuccess(transcript)
-                        }
-                        VoiceAction.Mute -> {
-                            manager.markSearching(transcript)
-                            executeButton(DeviceControllerButton.MUTE)
-                            manager.markSuccess(transcript)
-                        }
-                        is VoiceAction.LaunchApp -> {
-                            manager.markSearching(transcript)
-                            launchApp(action.appId)
-                            manager.markSuccess(transcript)
-                        }
-                    }
-                }
-            },
+            onCompleteListening = ::completeAndDispatch,
             onConfirm = { rawText ->
                 val action = VoiceCommandParser.parse(rawText)
                 when (action) {
