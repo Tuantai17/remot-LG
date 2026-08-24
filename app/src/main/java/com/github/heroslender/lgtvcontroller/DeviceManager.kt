@@ -7,6 +7,7 @@ import com.connectsdk.discovery.DiscoveryManager
 import com.connectsdk.discovery.DiscoveryManagerListener
 import com.connectsdk.discovery.provider.SSDPDiscoveryProvider
 import com.connectsdk.service.DLNAService
+import com.connectsdk.service.DeviceService
 import com.connectsdk.service.WebOSTVService
 import com.connectsdk.service.command.ServiceCommandError
 import com.github.heroslender.lgtvcontroller.device.Device
@@ -236,6 +237,7 @@ class DeviceManager(
 
         val device = LgDevice(cDevice, this, DeviceStatus.CONNECTING)
         cDevice.device.addListener(DeviceListener(this, device))
+        cDevice.device.setPairingType(DeviceService.PairingType.PIN_CODE)
         cDevice.device.connect()
 
         _connectedDevice.value = device
