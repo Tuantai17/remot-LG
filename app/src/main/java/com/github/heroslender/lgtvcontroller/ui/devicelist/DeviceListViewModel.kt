@@ -26,7 +26,7 @@ class DeviceListViewModel @Inject constructor(
                 )
             }
         )
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, DeviceListUiState())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DeviceListUiState())
 
     var deviceConnectedListener: () -> Unit = {}
 

@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -49,8 +50,8 @@ import com.github.heroslender.lgtvcontroller.device.DeviceControllerButton
 fun VoiceSearchHost(
     isConnected: Boolean,
     isTextInputAvailable: Boolean,
-    sendText: (String) -> Unit,
-    sendEnter: () -> Unit,
+    sendText: (String, (() -> Unit)?, ((Exception) -> Unit)?) -> Unit,
+    sendEnter: ((() -> Unit)?, ((Exception) -> Unit)?) -> Unit,
     executeButton: (DeviceControllerButton) -> Unit,
     launchApp: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -60,7 +61,8 @@ fun VoiceSearchHost(
     val manager = remember { VoiceSearchManager(context) }
     val state by manager.state.collectAsStateWithLifecycle()
     var showDialog by remember { mutableStateOf(false) }
-
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -94,56 +96,75 @@ fun VoiceSearchHost(
         when (val action = VoiceCommandParser.parse(transcript)) {
             is VoiceAction.SearchText -> {
                 if (isTextInputAvailable) {
-                    manager.markSearching(action.text)
-                    sendText(action.text)
-                    sendEnter()
-                    manager.markSuccess(action.text)
+                    manager.markSendingToTv(action.text)
+                    sendText(action.text, {
+                        sendEnter({
+                            manager.markSuccess(action.text)
+                        }, {
+                            manager.updateResult(action.text)
+                        })
+                    }, {
+                        manager.updateResult(action.text)
+                    })
                 } else manager.updateResult(action.text)
             }
             VoiceAction.VolumeUp -> {
-                manager.markSearching(transcript)
+                manager.markSendingToTv(transcript)
                 executeButton(DeviceControllerButton.VOLUME_UP)
                 manager.markSuccess(transcript)
             }
             VoiceAction.VolumeDown -> {
-                manager.markSearching(transcript)
+                manager.markSendingToTv(transcript)
                 executeButton(DeviceControllerButton.VOLUME_DOWN)
                 manager.markSuccess(transcript)
             }
             VoiceAction.Mute -> {
-                manager.markSearching(transcript)
+                manager.markSendingToTv(transcript)
                 executeButton(DeviceControllerButton.MUTE)
                 manager.markSuccess(transcript)
             }
             is VoiceAction.LaunchApp -> {
-                manager.markSearching(transcript)
+                manager.markSendingToTv(transcript)
                 launchApp(action.appId)
                 manager.markSuccess(transcript)
             }
         }
     }
 
-    Button(
-        onClick = {},
-        enabled = isConnected,
+    androidx.compose.material3.Surface(
         shape = ShapeDefaults.Large,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        ),
+        color = if (isConnected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = if (isConnected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier.pointerInput(isConnected) {
-            detectTapGestures(
-                onPress = {
-                    if (!isConnected) return@detectTapGestures
-                    begin()
-                    if (tryAwaitRelease()) completeAndDispatch()
+            if (!isConnected) return@pointerInput
+            awaitPointerEventScope {
+                while (true) {
+                    val downEvent = awaitPointerEvent(PointerEventPass.Initial)
+                    if (downEvent.changes.any { it.pressed }) {
+                        scope.launch { begin() }
+                    }
+                    var isReleased = false
+                    while (!isReleased) {
+                        val upEvent = awaitPointerEvent(PointerEventPass.Initial)
+                        if (upEvent.changes.all { !it.pressed }) {
+                            isReleased = true
+                            // If the gesture was released, stop recording immediately
+                            scope.launch {
+                                if (manager.state.value.phase == VoiceSearchPhase.LISTENING) {
+                                    completeAndDispatch()
+                                }
+                            }
+                        }
+                    }
                 }
-            )
+            }
         },
     ) {
-        Icon(Icons.Filled.Mic, contentDescription = "Voice Search")
+        androidx.compose.foundation.layout.Box(
+            contentAlignment = androidx.compose.ui.Alignment.Center
+        ) {
+            Icon(Icons.Filled.Mic, contentDescription = "Voice Search")
+        }
     }
 
     if (showDialog) {
@@ -169,10 +190,16 @@ fun VoiceSearchHost(
                 when (action) {
                     is VoiceAction.SearchText -> {
                         if (isTextInputAvailable) {
-                            manager.markSearching(action.text)
-                            sendText(action.text)
-                            sendEnter()
-                            manager.markSuccess(action.text)
+                            manager.markSendingToTv(action.text)
+                            sendText(action.text, {
+                                sendEnter({
+                                    manager.markSuccess(action.text)
+                                }, {
+                                    manager.updateResult(action.text)
+                                })
+                            }, {
+                                manager.updateResult(action.text)
+                            })
                         } else {
                             manager.updateResult(action.text)
                         }
@@ -186,7 +213,6 @@ fun VoiceSearchHost(
                     manager.markSuccess(rawText)
                 }
             },
-            textInputUnavailable = state.phase == VoiceSearchPhase.RESULT && !isTextInputAvailable,
         )
     }
 }
@@ -200,7 +226,6 @@ fun VoiceSearchDialog(
     onOpenSettings: () -> Unit,
     onCompleteListening: () -> Unit,
     onConfirm: (String) -> Unit,
-    textInputUnavailable: Boolean,
 ) {
     val pulse by rememberInfiniteTransition(label = "voicePulse").animateFloat(
         initialValue = 0.9f,
@@ -242,7 +267,7 @@ fun VoiceSearchDialog(
                         Text("Đang xử lý…")
                         Text(state.displayText)
                     }
-                    VoiceSearchPhase.SEARCHING -> {
+                    VoiceSearchPhase.SENDING_TO_TV -> {
                         Text("Đang gửi tới TV…")
                         Text(state.displayText)
                     }
@@ -258,15 +283,6 @@ fun VoiceSearchDialog(
                         modifier = Modifier.fillMaxWidth(),
                     )
                     VoiceSearchPhase.ERROR -> Text(message, color = MaterialTheme.colorScheme.error)
-                    else -> Text("Nhấn Thử lại để bắt đầu.")
-                }
-                if (textInputUnavailable) {
-                    Text(
-                        "LG webOS không hỗ trợ trực tiếp nút Voice Assistant qua API remote công khai. " +
-                            "Hãy mở ô tìm kiếm trên TV để dùng chế độ Voice → Text → TV.",
-                        modifier = Modifier.padding(top = 8.dp),
-                        color = MaterialTheme.colorScheme.error,
-                    )
                 }
             }
         },

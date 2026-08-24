@@ -56,91 +56,92 @@ class LgDevice(
     private val _errors = MutableSharedFlow<Snackbar>()
     override val errors: Flow<Snackbar> = _errors
 
-    val service
-        get() = device.device.getServiceByName(WebOSTVService.ID) as WebOSTVService
+    fun getWebOSTVService(): WebOSTVService? {
+        if (!device.device.isConnected) return null
+        return device.device.getServiceByName(WebOSTVService.ID) as? WebOSTVService
+    }
 
     override fun hasCapability(capability: String): Boolean {
         return device.device.hasCapability(capability)
     }
 
     override fun powerOff() {
-        service.powerOff(null)
+        getWebOSTVService()?.powerOff(null)
         disconnect()
     }
 
     override fun volumeUp() {
-        service.volumeUp()
+        getWebOSTVService()?.volumeUp()
     }
 
     override fun volumeDown() {
-        service.volumeDown()
+        getWebOSTVService()?.volumeDown()
     }
 
     override fun mute() {
-        service.sendSpecialKey("MUTE")
+        getWebOSTVService()?.sendSpecialKey("MUTE")
     }
 
     override fun channelUp() {
-        service.channelUp()
+        getWebOSTVService()?.channelUp()
     }
 
     override fun channelDown() {
-        service.channelDown()
+        getWebOSTVService()?.channelDown()
     }
 
     override fun up() {
-        service.keyControl.up(null)
+        getWebOSTVService()?.keyControl?.up(null)
     }
 
     override fun down() {
-        service.keyControl.down(null)
+        getWebOSTVService()?.keyControl?.down(null)
     }
 
     override fun left() {
-        service.keyControl.left(null)
+        getWebOSTVService()?.keyControl?.left(null)
     }
 
     override fun right() {
-        service.keyControl.right(null)
+        getWebOSTVService()?.keyControl?.right(null)
     }
 
     override fun ok() {
-        service.keyControl.sendKeyCode(KeyControl.KeyCode.ENTER, null)
-//        service.keyControl.ok(null)
+        getWebOSTVService()?.keyControl?.sendKeyCode(KeyControl.KeyCode.ENTER, null)
     }
 
     override fun back() {
-        service.keyControl.back(null)
+        getWebOSTVService()?.keyControl?.back(null)
     }
 
     override fun exit() {
-        service.sendSpecialKey("EXIT")
+        getWebOSTVService()?.sendSpecialKey("EXIT")
     }
 
     override fun home() {
-        service.keyControl.home(null)
+        getWebOSTVService()?.keyControl?.home(null)
     }
 
     override fun info() {
-        service.sendSpecialKey("INFO")
+        getWebOSTVService()?.sendSpecialKey("INFO")
     }
 
     override fun source() {
-        service.getExternalInputList(null)
+        getWebOSTVService()?.getExternalInputList(null)
     }
 
     override fun menu() {
-        service.sendSpecialKey("MENU")
+        getWebOSTVService()?.sendSpecialKey("MENU")
     }
 
     override fun qmenu() {
-        service.sendSpecialKey("QMENU")
+        getWebOSTVService()?.sendSpecialKey("QMENU")
     }
 
     override fun launchNetflix() = launchApp("netflix")
 
     override fun launchApp(appId: String) {
-        service.launchApp(appId, null)
+        getWebOSTVService()?.launchApp(appId, null)
     }
 
     override fun disconnect() {
@@ -227,7 +228,11 @@ class LgDevice(
         }
 
         return suspendCoroutine { continuation ->
-            val webOSTVService = device.device.getServiceByName(WebOSTVService.ID) as WebOSTVService
+            val webOSTVService = getWebOSTVService()
+            if (webOSTVService == null) {
+                continuation.resume(emptyList())
+                return@suspendCoroutine
+            }
             webOSTVService.getLaunchPoints(object : WebOSTVService.LaunchPointsListener {
                 override fun onSuccess(arr: JSONArray) {
                     val list = mutableListOf<App>()
@@ -279,12 +284,20 @@ class LgDevice(
         })
     }
 
-    override fun sendText(text: String) {
-        device.device.textInputControl.sendText(text)
+    override fun sendText(text: String, onSuccess: (() -> Unit)?, onError: ((Exception) -> Unit)?) {
+        val listener = object : com.connectsdk.service.capability.listeners.ResponseListener<Any> {
+            override fun onSuccess(response: Any?) { onSuccess?.invoke() }
+            override fun onError(error: ServiceCommandError) { onError?.invoke(Exception(error.message)) }
+        }
+        device.device.textInputControl?.sendText(text, listener) ?: onError?.invoke(Exception("TextInputControl not available"))
     }
 
-    override fun sendEnter() {
-        device.device.textInputControl.sendEnter()
+    override fun sendEnter(onSuccess: (() -> Unit)?, onError: ((Exception) -> Unit)?) {
+        val listener = object : com.connectsdk.service.capability.listeners.ResponseListener<Any> {
+            override fun onSuccess(response: Any?) { onSuccess?.invoke() }
+            override fun onError(error: ServiceCommandError) { onError?.invoke(Exception(error.message)) }
+        }
+        device.device.textInputControl?.sendEnter(listener) ?: onError?.invoke(Exception("TextInputControl not available"))
     }
 
     override fun sendDelete() {
@@ -292,15 +305,15 @@ class LgDevice(
     }
 
     override fun mouseClick() {
-        service.mouseControl.click()
+        getWebOSTVService()?.mouseControl?.click()
     }
 
     override fun moveMouse(x: Double, y: Double) {
-        service.mouseControl.move(x, y)
+        getWebOSTVService()?.mouseControl?.move(x, y)
     }
 
     override fun scroll(x: Double, y: Double) {
-        service.mouseControl.scroll(x, y)
+        getWebOSTVService()?.mouseControl?.scroll(x, y)
     }
 
     fun subscribeTextInputListener() {

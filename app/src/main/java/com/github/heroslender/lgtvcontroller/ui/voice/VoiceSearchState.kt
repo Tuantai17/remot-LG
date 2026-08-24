@@ -6,7 +6,7 @@ enum class VoiceSearchPhase {
     LISTENING,
     PROCESSING,
     RESULT,
-    SEARCHING,
+    SENDING_TO_TV,
     SUCCESS,
     ERROR,
     CANCELLED,

@@ -120,8 +120,8 @@ interface Device {
 
     fun launchApp(appId: String)
 
-    fun sendText(text: String)
-    fun sendEnter()
+    fun sendText(text: String, onSuccess: (() -> Unit)? = null, onError: ((Exception) -> Unit)? = null)
+    fun sendEnter(onSuccess: (() -> Unit)? = null, onError: ((Exception) -> Unit)? = null)
     fun sendDelete()
 
     fun disconnect()

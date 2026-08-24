@@ -10,8 +10,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.atomic.AtomicBoolean
+import android.util.Log
 
 class VoiceSearchManager(context: Context) : RecognitionListener {
+    private val TAG = "VoiceSearchManager"
     private val appContext = context.applicationContext
     private var recognizer: SpeechRecognizer? = null
     private val isCompleting = AtomicBoolean(false)
@@ -33,6 +35,7 @@ class VoiceSearchManager(context: Context) : RecognitionListener {
             phase = VoiceSearchPhase.LISTENING,
             localeTag = localeTag,
         )
+        Log.d(TAG, "VOICE_START")
         recognizer?.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, localeTag)
@@ -61,6 +64,7 @@ class VoiceSearchManager(context: Context) : RecognitionListener {
             fail(VoiceSearchError.NO_SPEECH)
             return null
         }
+        Log.d(TAG, "VOICE_COMPLETE: $transcript")
         _state.value = _state.value.copy(
             phase = VoiceSearchPhase.PROCESSING,
             finalText = transcript,
@@ -70,8 +74,8 @@ class VoiceSearchManager(context: Context) : RecognitionListener {
         return transcript
     }
 
-    fun markSearching(text: String) {
-        _state.value = _state.value.copy(phase = VoiceSearchPhase.SEARCHING, finalText = text)
+    fun markSendingToTv(text: String) {
+        _state.value = _state.value.copy(phase = VoiceSearchPhase.SENDING_TO_TV, finalText = text)
     }
 
     fun markSuccess(text: String) {
@@ -83,6 +87,7 @@ class VoiceSearchManager(context: Context) : RecognitionListener {
     }
 
     fun cancel() {
+        Log.d(TAG, "VOICE_STOP")
         isCompleting.set(true)
         recognizer?.cancel()
         _state.value = _state.value.copy(phase = VoiceSearchPhase.CANCELLED)
@@ -143,7 +148,10 @@ class VoiceSearchManager(context: Context) : RecognitionListener {
         val text = results
             ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
             ?.firstOrNull()
-            .orEmpty()
+            ?: ""
+        if (text.isNotBlank()) {
+            Log.d(TAG, "VOICE_RESULT: $text")
+        }
         if (text.isBlank()) fail(VoiceSearchError.NO_SPEECH) else updateResult(text)
     }
 
@@ -162,6 +170,7 @@ class VoiceSearchManager(context: Context) : RecognitionListener {
     override fun onEvent(eventType: Int, params: Bundle?) = Unit
 
     private fun fail(error: VoiceSearchError) {
-        _state.value = _state.value.copy(phase = VoiceSearchPhase.ERROR, error = error)
+        Log.d(TAG, "VOICE_ERROR: $error")
+        _state.value = VoiceSearchState(phase = VoiceSearchPhase.ERROR, error = error)
     }
 }

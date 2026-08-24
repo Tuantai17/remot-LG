@@ -33,11 +33,11 @@ class DeviceManager(
     private val scope: CoroutineScope,
     private val tvRepository: TvRepository,
 ) : DiscoveryManagerListener {
-    private var _connectedDevice: MutableStateFlow<LgDevice?> = MutableStateFlow(null)
+    private val _connectedDevice: MutableStateFlow<LgDevice?> = MutableStateFlow(null)
     val connectedDevice: StateFlow<Device?>
         get() = _connectedDevice
 
-    private var _devices: MutableStateFlow<List<NetworkDevice>> = MutableStateFlow(emptyList())
+    private val _devices: MutableStateFlow<List<NetworkDevice>> = MutableStateFlow(emptyList())
     val devices: StateFlow<List<NetworkDevice>>
         get() = _devices
 
@@ -180,7 +180,7 @@ class DeviceManager(
 
     override fun onDeviceRemoved(manager: DiscoveryManager, device: ConnectableDevice) {
         Log.d("Device_Manager", "onDeviceRemoved :::: ${device.friendlyName}; ${device.id}")
-        _devices.tryEmit(devices.value.toMutableList().apply { removeIf { it.id == device.id } })
+        _devices.update { current -> current.filter { it.id != device.id } }
     }
 
     override fun onDiscoveryFailed(manager: DiscoveryManager, error: ServiceCommandError) {
@@ -205,7 +205,9 @@ class DeviceManager(
                     manager = this@DeviceManager,
                 )
 
-                _devices.tryEmit(listOf(*devices.value.toTypedArray(), networkDevice))
+                _devices.update { current ->
+                    current.filter { it.id != networkDevice.id } + networkDevice
+                }
 
                 Log.d("Device_Manager", "Device found: ${device.friendlyName}")
 

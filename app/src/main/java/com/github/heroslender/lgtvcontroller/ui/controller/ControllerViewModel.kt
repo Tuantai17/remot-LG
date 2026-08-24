@@ -26,14 +26,35 @@ class ControllerViewModel @Inject constructor(
                 ControllerUiState(
                     deviceName = if (deviceState.displayName.isNullOrEmpty()) device.friendlyName else deviceState.displayName,
                     deviceStatus = deviceState.status,
-                    clickMouse = device::mouseClick,
-                    moveMouse = { x, y -> device.moveMouse(x, y) },
-                    scroll = { x, y -> device.scroll(x, y) },
-                    sendPin = { pin -> deviceManager.sendPin(pin) },
-                    hasCapability = { device.hasCapability(it) },
-                    executeButton = { device.executeControllerButton(it) },
-                    launchApp = device::launchApp,
                 )
             }
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, ControllerUiState())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ControllerUiState())
+
+    fun clickMouse() {
+        deviceManager.connectedDevice.value?.mouseClick()
+    }
+
+    fun moveMouse(x: Double, y: Double) {
+        deviceManager.connectedDevice.value?.moveMouse(x, y)
+    }
+
+    fun scroll(x: Double, y: Double) {
+        deviceManager.connectedDevice.value?.scroll(x, y)
+    }
+
+    fun sendPin(pin: String) {
+        deviceManager.sendPin(pin)
+    }
+
+    fun hasCapability(button: com.github.heroslender.lgtvcontroller.device.DeviceControllerButton): Boolean {
+        return deviceManager.connectedDevice.value?.hasCapability(button) == true
+    }
+
+    fun executeButton(button: com.github.heroslender.lgtvcontroller.device.DeviceControllerButton) {
+        deviceManager.connectedDevice.value?.executeControllerButton(button)
+    }
+
+    fun launchApp(appId: String) {
+        deviceManager.connectedDevice.value?.launchApp(appId)
+    }
 }

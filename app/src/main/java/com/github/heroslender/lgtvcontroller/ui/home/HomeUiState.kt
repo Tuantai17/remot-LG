@@ -12,8 +12,4 @@ data class HomeUiState(
     val apps: List<App> = emptyList(),
     val inputs: List<Input> = emptyList(),
     val runningApp: String = "",
-    val hasCapability: (DeviceControllerButton) -> Boolean = { false },
-    val executeButton: (DeviceControllerButton) -> Unit = {},
-    val launchApp: (String) -> Unit = {},
-    val sendPin: (String) -> Unit = {},
 )

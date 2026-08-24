@@ -30,11 +30,23 @@ class HomeViewModel @Inject constructor(
                     runningApp = deviceState.runningApp,
                     apps = deviceState.apps,
                     inputs = deviceState.inputs,
-                    hasCapability = device::hasCapability,
-                    executeButton = device::executeControllerButton,
-                    launchApp = device::launchApp,
-                    sendPin = deviceManager::sendPin,
                 )
             }
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, HomeUiState())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
+
+    fun hasCapability(button: com.github.heroslender.lgtvcontroller.device.DeviceControllerButton): Boolean {
+        return deviceManager.connectedDevice.value?.hasCapability(button) == true
+    }
+
+    fun executeButton(button: com.github.heroslender.lgtvcontroller.device.DeviceControllerButton) {
+        deviceManager.connectedDevice.value?.executeControllerButton(button)
+    }
+
+    fun launchApp(appId: String) {
+        deviceManager.connectedDevice.value?.launchApp(appId)
+    }
+
+    fun sendPin(pin: String) {
+        deviceManager.sendPin(pin)
+    }
 }

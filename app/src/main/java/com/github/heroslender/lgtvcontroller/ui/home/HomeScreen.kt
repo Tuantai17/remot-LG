@@ -127,6 +127,10 @@ fun HomePreview(
         navigateToDeviceList = {},
         navigateToController = {},
         navigateToEditDevice = {},
+        hasCapability = { true },
+        executeButton = {},
+        launchApp = {},
+        sendPin = {},
     )
 }
 
@@ -148,6 +152,10 @@ fun HomeScreen(
         navigateToDeviceList = navigateToDeviceList,
         navigateToController = navigateToController,
         navigateToEditDevice = navigateToEditDevice,
+        hasCapability = homeViewModel::hasCapability,
+        executeButton = homeViewModel::executeButton,
+        launchApp = homeViewModel::launchApp,
+        sendPin = homeViewModel::sendPin,
     )
 }
 
@@ -160,6 +168,10 @@ fun HomeScreen(
     navigateToDeviceList: () -> Unit,
     navigateToController: () -> Unit,
     navigateToEditDevice: (String) -> Unit,
+    hasCapability: (com.github.heroslender.lgtvcontroller.device.DeviceControllerButton) -> Boolean,
+    executeButton: (com.github.heroslender.lgtvcontroller.device.DeviceControllerButton) -> Unit,
+    launchApp: (String) -> Unit,
+    sendPin: (String) -> Unit,
 ) {
     if (uiState.deviceStatus == DeviceStatus.PIN_REQUIRED) {
         var pinCode by remember { mutableStateOf("") }
@@ -183,7 +195,7 @@ fun HomeScreen(
             confirmButton = {
                 TextButton(
                     enabled = pinCode.isNotBlank(),
-                    onClick = { uiState.sendPin(pinCode) },
+                    onClick = { sendPin(pinCode) },
                 ) {
                     Text("Kết nối")
                 }
@@ -231,9 +243,9 @@ fun HomeScreen(
         ) {
             ControllerShortcutsCard(
                 isConnected = uiState.deviceID != null,
-                hasCapability = uiState.hasCapability,
-                executeButton = uiState.executeButton,
-                launchApp = uiState.launchApp,
+                hasCapability = hasCapability,
+                executeButton = executeButton,
+                launchApp = launchApp,
                 textInputState = textInputState,
                 navigateToController = navigateToController,
             )
@@ -242,7 +254,7 @@ fun HomeScreen(
                 apps = uiState.apps,
                 runningApp = uiState.runningApp,
                 openApp = { app ->
-                    uiState.launchApp(app.id)
+                    launchApp(app.id)
                 }
             )
 
@@ -250,7 +262,7 @@ fun HomeScreen(
                 inputs = uiState.inputs,
                 runningApp = uiState.runningApp,
                 switchInput = { input ->
-                    uiState.launchApp(input.id)
+                    launchApp(input.id)
                 }
             )
         }

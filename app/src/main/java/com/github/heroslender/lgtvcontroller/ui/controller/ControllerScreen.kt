@@ -99,7 +99,14 @@ fun ControllerScreenPreview(
         controllerUiState = controllerUiState,
         tvTextInputState = TvTextInputState(),
         errorFlow = emptyFlow(),
-        navigateUp = {}
+        navigateUp = {},
+        clickMouse = {},
+        moveMouse = { _, _ -> },
+        scroll = { _, _ -> },
+        sendPin = {},
+        hasCapability = { true },
+        executeButton = {},
+        launchApp = {},
     )
 }
 
@@ -117,6 +124,13 @@ fun ControllerScreen(
         tvTextInputState,
         controllerViewModel.errors,
         navigateUp,
+        controllerViewModel::clickMouse,
+        controllerViewModel::moveMouse,
+        controllerViewModel::scroll,
+        controllerViewModel::sendPin,
+        controllerViewModel::hasCapability,
+        controllerViewModel::executeButton,
+        controllerViewModel::launchApp,
     )
 }
 
@@ -127,6 +141,13 @@ fun ControllerScreen(
     tvTextInputState: TvTextInputState,
     errorFlow: Flow<Snackbar>,
     navigateUp: () -> Unit,
+    clickMouse: () -> Unit,
+    moveMouse: (Double, Double) -> Unit,
+    scroll: (Double, Double) -> Unit,
+    sendPin: (String) -> Unit,
+    hasCapability: (DeviceControllerButton) -> Boolean,
+    executeButton: (DeviceControllerButton) -> Unit,
+    launchApp: (String) -> Unit,
 ) {
     if (controllerUiState.deviceStatus == DeviceStatus.PIN_REQUIRED) {
         var pinCode by remember { mutableStateOf("") }
@@ -148,7 +169,7 @@ fun ControllerScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { controllerUiState.sendPin(pinCode) }) {
+                TextButton(onClick = { sendPin(pinCode) }) {
                     Text("Connect")
                 }
             },
@@ -180,18 +201,18 @@ fun ControllerScreen(
                 deviceStatus = controllerUiState.deviceStatus,
                 trackpadEnabled = trackpadEnabled,
                 setTrackpadEnabled = { trackpadEnabled = it },
-                hasPowerCapability = controllerUiState.hasCapability(DeviceControllerButton.POWER),
-                powerOff = { controllerUiState.executeButton(DeviceControllerButton.POWER) },
+                hasPowerCapability = hasCapability(DeviceControllerButton.POWER),
+                powerOff = { executeButton(DeviceControllerButton.POWER) },
                 navigateToDeviceList = navigateUp,
             )
 
             Controls(
                 trackpadEnabled = trackpadEnabled,
-                clickMouse = controllerUiState.clickMouse,
-                moveMouse = controllerUiState.moveMouse,
-                scroll = controllerUiState.scroll,
-                hasCapability = controllerUiState.hasCapability,
-                executeButton = controllerUiState.executeButton,
+                clickMouse = clickMouse,
+                moveMouse = moveMouse,
+                scroll = scroll,
+                hasCapability = hasCapability,
+                executeButton = executeButton,
             )
 
             VoiceSearchHost(
@@ -199,8 +220,8 @@ fun ControllerScreen(
                 isTextInputAvailable = tvTextInputState.isKeyboardOpen,
                 sendText = tvTextInputState.sendText,
                 sendEnter = tvTextInputState.sendEnter,
-                executeButton = controllerUiState.executeButton,
-                launchApp = controllerUiState.launchApp,
+                executeButton = executeButton,
+                launchApp = launchApp,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(4F, false),

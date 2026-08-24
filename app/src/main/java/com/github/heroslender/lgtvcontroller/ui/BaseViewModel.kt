@@ -31,9 +31,9 @@ open class BaseViewModel(
                     sendText = device::sendText,
                 )
             }
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, TvTextInputState())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TvTextInputState())
 
-    val errors: Flow<Snackbar> = deviceManager.connectedDevice.flatMapConcat { device ->
+    val errors: Flow<Snackbar> = deviceManager.connectedDevice.flatMapLatest { device ->
         if (device == null) {
             deviceManager.errors
         } else {
