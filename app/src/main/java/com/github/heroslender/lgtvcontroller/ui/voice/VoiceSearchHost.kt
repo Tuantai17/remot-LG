@@ -98,15 +98,9 @@ fun VoiceSearchHost(
             is VoiceAction.SearchText -> {
                 if (isTextInputAvailable) {
                     manager.markSendingToTv(action.text)
-                    sendText(action.text, {
-                        sendEnter({
-                            manager.markSuccess(action.text)
-                        }, {
-                            manager.updateResult(action.text)
-                        })
-                    }, {
-                        manager.updateResult(action.text)
-                    })
+                    sendText(action.text)
+                    sendEnter()
+                    manager.markSuccess(action.text)
                 } else manager.updateResult(action.text)
             }
             VoiceAction.VolumeUp -> {
