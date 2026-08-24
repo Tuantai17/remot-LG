@@ -111,7 +111,8 @@ fun VoiceSearchHost(
                 })
             },
             onConfirm = { rawText ->
-                when (val action = VoiceCommandParser.parse(rawText)) {
+                val action = VoiceCommandParser.parse(rawText)
+                when (action) {
                     is VoiceAction.SearchText -> {
                         if (isTextInputAvailable) {
                             sendText(action.text)
